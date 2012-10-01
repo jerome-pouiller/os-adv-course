@@ -27,8 +27,8 @@
 % Apparait sur chaque slide:
 %\logo{\pgfimage[height=5mm]{pics/logo}}
 
-\title{Systèmes d'exploitation}
-\hypersetup{pdftitle={Systèmes d'exploitation}}
+\title{Systèmes d'exploitation embarqués}
+\hypersetup{pdftitle={Systèmes d'exploitation embarqués}}
 % \subtitle{Sous-titre}
 \author[Sysmic - J. Pouiller]{Jérôme Pouiller \email{j.pouiller@sysmic.org}}
 \hypersetup{pdfauthor={Sysmic - Jérôme Pouiller}}
@@ -44,7 +44,7 @@
 \date{}
 % Pour le PDF seulement:
 \subject{Systèmes d'exploitation}
-\keywords{}
+\keywords{Linux}
   
 \begin{document}
 
@@ -52,25 +52,6 @@
     \maketitle
     \note[item]{Parler de moi, de mon CV, freelance, sysmic, expertise, Polytech Paris, Tours, Insa Rennes}
   \end{frame}
-
-  % -360 slides- -> 240 slides
-  % 0-2 Shell (ca va déborder de 5min)
-  % 2-4 Filesystems (ca va déborder de 10min)
-  % 4-6 Création d'executable et les Makefile (tout juste 2h)
-  % 6-8 Gestion Monotache (1h30)
-  % 8-10 Gestion Multitache (2h tout juste. A étoffer)
-  % 10-12 Gestion de la mémoire et debug de la mémoire(1h), Communication interprocess (A supprimer). Architecture et virtualisation (1h)
-
-
-  \include{intro}
-  \include{shell}
-  \include{fs}
-  \include{elf}
-  \include{monotache}
-  \include{multitaches}
-  \include{memory}
-  %\include{ipc}
-  \include{archi}
 
   % 200 slides -> 320 slides
   % 0-2 Systèmes de compilation 1/2 (2h)
