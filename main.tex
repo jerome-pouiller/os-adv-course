@@ -53,6 +53,7 @@
     \note[item]{Parler de moi, de mon CV, freelance, sysmic, expertise, Polytech Paris, Tours, Insa Rennes}
   \end{frame}
 
+  % OLD:
   % 200 slides -> 320 slides
   % 0-2 Systèmes de compilation 1/2 (2h)
   % 2-4 Systèmes de compilation 2/2 (1h)
@@ -63,12 +64,29 @@
   % 12-14 
   % 14-16 
 
-  %\include{ipc}
-  \include{compil}
-%  \include{boot}
-%  \include{make-elinux}
-%  \include{drivers}
-%  \include{debug}
+
+  % Il faut 240 slides:
+  % Fonctionnement de la segmentation et de la pagination
+\include{system-memory}
+  % Algorithme de gestion de la mémoire
+\include{user-memory}
+  % Les IPC: Bus logiciel, etc...
+\include{ipc}
+  % Fonctionnement des drivers: Char dev, etc... ?
+%\include{drivers1}
+  % Monolithique/micro, archi Linux, serveurs, bibliothèque, etc...
+\include{archi}
+  % Systèmes de compilation: Make, autotools, cmake
+\include{compil}
+  % Boot: A ecrire! : chargement en memoire, bootloader, kernel, head.S, start_kernel (init/main.c), initrd, rootfs (root=, /bin/init, /etc/inittab, /etc/rcS. /etc/init.d(beurk)), initrd (pour les drivers), boot nfs, boot tftp, mtd/jffs2, ubi
+%\include{boot}
+  % Fabrication de Linux : kernel, buildroot, toolchain (glibc/uclibc, etc...), mtd
+\include{make-elinux}
+  % Drivers/modules, udev
+\include{drivers}
+  % Debug
+\include{debug}
+  % Virtualisation (chroot/pivot_root, namespace, lxc, qemu/javascript/java/dotnet/lwm, qemu-system/kvm)
 
 
 \end{document}
