@@ -1,6 +1,32 @@
 /*
  * Test with:
- *   echo 123456 | valgrind --leak-check=yes ./a.out
+ * dmalloc:
+ *   Paquet ubuntu bugué: https://bugs.launchpad.net/ubuntu/+source/dmalloc/+bug/971174
+ *   wget http://dmalloc.com/releases/dmalloc-5.5.2.tgz
+ *   tar xvzf dmalloc-5.5.2.tgz
+ *   Suppression des surcharges des fonctions dans malloc.c
+ *   ./configure && make && sudo make install
+ *   Décommenter #include <dmalloc.h>
+ *   gcc -g test-valgrind.c -ldmalloc
+ *   dmalloc -DV
+ *   dmalloc -tV
+ *   dmalloc high -m error-abort -l dmalloc.out
+ *   echo 123456 | DMALLOC_OPTIONS=debug=0xcb4ed2b,log=dmalloc.out ./a.out
+ *   less dmalloc.out
+ * DUMA:
+ *   gcc -g test-valgrind.c 
+ *   ulimit -c unlimited
+ *   rm core
+ *   echo 1234 | LD_PRELOAD=/usr/lib/libduma.so.0.0.0 DUMA_FILL=1 DUMA_PROTECT_FREE=1 ./a.out
+ *   gdb -core core a.out
+ * Valgrind:
+ *   gcc -g test-valgrind.c   
+ *   echo 123456 | valgrind --leak-check=yes ./a.out 
+ * Mudflap
+ *   sudo apt-get install libmudflap0-4.6-dev
+ *   gcc -fmudflap -lmudflap -g test-valgrind.c
+ *   export MUDFLAP_OPTIONS='-help';  echo 12345 | ./a.out
+ *   export MUDFLAP_OPTIONS='-print-leaks -check-initialization'; echo 12345 | ./a.out
  */
 
 #include <stdio.h>
