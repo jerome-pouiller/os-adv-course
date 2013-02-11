@@ -31,12 +31,41 @@
 
 \subsection{Un projet base de Makefile}
 
+\begin{frame}[fragile=singleslide]{Qu'est-ce qu'un cross-compiler?}
+  \begin{itemize}
+  \item Permet de compiler vers une cible différente du host
+  \item Les binaires produites ne sont pas éxecutable sur le host
+  \item La cible de la compilation est généralement décrites dans le nom
+  \end{itemize}
+  \begin{lstlisting}
+$ /opt/arm-sysmic-linux-uclibcgnueabi/usr/bin/arm-buildroot-linux-uclibcgnueabi-gcc source.c
+$ PATH+=:/opt/arm-sysmic-linux-uclibcgnueabi/usr/bin/
+$ arm-buildroot-linux-uclibcgnueabi-gcc source.c
+$ file a.out
+a.out: ELF 32-bit LSB executable, ARM, version 1 (SYSV), dynamically linked (uses shared libs), not stripped
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Cas générique}
+  On utilise les variables prédéfinies de gmake:
+  \begin{lstlisting}
+make CC=arm-linux-gcc
+  \end{lstlisting}
+  Mieux dans un sous répertoire séparé:
+  \begin{lstlisting}
+mkdir arm
+cd arm
+make -f ../Makefile VPATH=.. CC==arm-linux-gcc
+  \end{lstlisting}
+  Exemple avec memstat.
+\end{frame}
+
 \begin{frame}[fragile=singleslide]{Créer un projet sans autotools}
   Utiliser au maximum les règles implicites facilite votre travail
-\begin{lstlisting}
+  \begin{lstlisting}
 host$ touch Makefile
 host$ make
-\end{lstlisting} %$
+  \end{lstlisting} %$
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Créer un projet sans autotools}
@@ -98,7 +127,6 @@ host$ make -f ../Makefile VPATH=.. CC=arm-linux-gcc
   \end{enumerate}
 \end{frame}
 
-
 \begin{frame}[fragile=singleslide]{Compiler avec autotools}
   \begin{itemize}
   \item C'est le cas le plus courant
@@ -108,15 +136,16 @@ host$ ./configure
 host$ make
 host% make install
 \end{lstlisting} %$
+  \item Exemple avec dropbear.
   \item Compilation \emph{out-of-source}. il est nécessaire d'appeller
     le \file{configure} à partir du répertoire de build.
-\begin{lstlisting}
+    \begin{lstlisting}
 host$ mkdir build
 host$ cd build
 host$ ../configure
 host$ make
 host% make install
-\end{lstlisting} %$
+    \end{lstlisting} %$
   \end{itemize}
 \end{frame}
 
@@ -139,6 +168,7 @@ host$ head config.log
     Makefile.  \cmd{config.status} est  automatiquement appellé  si un
     Makefile.am est modifié.
   \end{itemize}
+  \note{Ajouter un exemple avec tcpdump ou dmalloc}
 \end{frame}
 
 
@@ -257,6 +287,7 @@ host$ make ARCH=arm CROSS_COMPILE=arm-linux- xconfig
 \end{lstlisting} %$
     \end{itemize}
   \item Ne pas oublier d'installer les headers des bibliothèques
+    \item Exemple avec busybox
   \end{itemize}
 \end{frame}
 
@@ -341,6 +372,7 @@ cmake_minimum_required (VERSION 2.6)
 project (HELLO)
 add_executable (hello hello.c)
     \end{lstlisting}
+  \item Exemple avec yajl
   \item Cmake génère des fichiers  pour les différent types de système
     de compilation: Makefile, XCode, projet VisualStudio, etc...
     \begin{lstlisting}

@@ -6,7 +6,7 @@
 % Copyright 2010 Jérôme Pouiller <jezz@sysmic.org>
 %
 
-\part{Créer}
+\part{Assembler}
 
 \begin{frame}
   \partpage
@@ -16,7 +16,130 @@
   \tableofcontents[currentpart]
 \end{frame}
 
-\section{Booter par réseau}
+\section{Le Boot}
+
+\begin{frame}[fragile=singleslide]{Le Boot}
+  Les Bootloaders:
+  \begin{itemize}
+  \item Le CPU commence par  executer des instructions situées sur une
+    addresse mémoire.
+  \item  Le  premier  morceau  de  code se  trouve  forcément  mappé
+    directement en mémoire
+  \item Il  s'agit généralement d'une eeprom ou  d'une rom (Celle-ci
+    est directement  mappée sur  le bus d'adresse,  contrairement au
+    flash)
+  \item   De    nos   jours   les    micro-controlleur   intègre   des
+    \emph{bootloader} en ROM
+  \item   Ces   bootloader   peuvent   peuvent  avoir   de   nombreuse
+    fonctionnalités
+  \item Les ROM ont  généralement une capacité limitée (entre quelques
+    Ko et quelques Mo)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Le Boot}
+  \begin{itemize} 
+  \item L'objectif du premier étage est de charger la suite du système
+    en mémoire
+    \begin{itemize}
+    \item Initialiser un périphérique plus important comme une flash
+    \item Copier le contenu du périphérique en mémoire
+    \item Sauter sur le bootloader de niveau suivant
+    \end{itemize}
+  \item Il existe souvent plusieurs étage de bootloader
+  \item A la  fin de l'éxecution des bootloaders,  le noyau du système
+    d'exploitation doit être présent en mémoire.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Le Boot}
+  Le noyau:
+  \begin{itemize}
+  \item Généralement compressé.
+  \item Le  noyau contient un  bootloader qui décompresse le  noyau en
+    mémoire
+  \item       Démarrage       de       Linux      proprement       dit
+    (\file{init/main.c:start_kernel}).
+  \item   Initilisation  des  parties   primordiales  de   l'OS:  MMU,
+    scheduler,...
+  \item Le noyau cherche à démarrer un programme pour donner la main à
+    l'utilisateur.
+  \item Il  faut tout d'abord initialiser le  périphérique de stockage
+    (disque dur, flash, etc...).
+  \item Il le monte sur \file{/} puis il démarre \file{/sbin/init}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Le Boot}
+  L'espace utilisateur:
+  \begin{itemize}
+  \item \file{/sbin/init}:  Execute \file{/etc/init.d/rcS}
+  \item qui  éxecute \file{/etc/rc2.d/*}.  Ces  scripts contiennent le
+    démarrage de divers applications.
+  \item  ...  et  en  particulier \file{login}  ou  de \file{gdm}  qui
+    permet  à  l'utilisateur  de  s'authentifier et  d'intéragir  avec
+    Linux.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Exemples}
+  Exemple de système Linux SysV sur Atmel SAM926 (Arm 926ejs):
+    \begin{itemize}
+    \item  ROMBoot:  Execution  de  ROMBoot,  depuis  la  ROM  sur  le
+      microcontrolleur.   ROMBoot  intègre  un  système  verifiant  le
+      premier octet de l'EEprom. Si  celui-ci vaut 0, il attend sur le
+      port serie des octets qu'il ecrira sur l'eeprom
+    \item AT91Bootstrap: ROMBoot passe  la main à AT91Bootstrap qui se
+      trouve sur  une EEPROM. AT91Bootstrap peut  initialiser la flash
+      et charger le contenu des premières pages
+    \item U-Boot:  Ces pages contiennent U-Boot,  un bootloader évolué
+      capable  d'initialiser  le  port  RS232,  le  réseau,  lire  des
+      partitions, des fichiers, etc...
+    \item  Bootloader   Noyau:  U-Boot   charge  le  noyau   linux  en
+      mémoire.  Celui-ci est  compressé.  Un  bootloader permet  de le
+      décompresser (head.S).
+    \item    Noyau:     Démarrage    de    Linux
+    \item   \file{/sbin/init}:   Execute  \file{/etc/init.d/rcS}   qui
+      éxecute \file{/etc/rc2.d/*}.  ce script contiennent le démarrage
+      de divers application et  en particulier \file{login} qui permet
+      à l'utilisateur de s'authentifier et d'intéragit avec Linux.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Exemples}
+  Exemple du système Linux sur imx6 (Arm Cortex-A9):
+  \begin{itemize}
+  \item Le bootloader situé en ROM lis une configuration enfonction de
+    l'état  de  certains GPIO.   Cette  configuration  lui indique  de
+    charger une  carte SD.  Il initialise  le bus, puis  le lecteur de
+    carte et copie les première pages de la carte SD en mémoire.
+  \item  Les  premières  pages  sont  assez  large  pour  contenir  le
+    noyau. Le noyau est executé
+  \item Le noyau démarre ensuite comme sur le SAM926
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Exemples} Exemple sur PC-Bios
+  \begin{itemize}
+  \item Un bootloader  est executé depuis une ROM sur  le CPU. Il fait
+    une initialisation très bas niveau du CPU.
+  \item Le bootloader  donne la main au bios situé  sur une EEPROM. Le
+    bios contient la configuration du périphérique à executer
+  \item Le Bios charge les 512 premiers octets du disque configuré. Il
+    s'agit du premier étage de Grub
+  \item  En s'appuyant  sur  les  fonctions données  par  le Bios,  le
+    premier étage de Grub charge l'étage 1.5 contenant 30Ko de données
+    un peu après le MBR.
+  \item L'étage 1.5 va  chercher le fichier \file{/boot/grub} (l'étage
+    2)  et le charge.   L'étage 2  est capable  d'afficher un  menu et
+    d'intéragir avec l'utilisateur.
+  \item L'étage charge \file{/boot/vmlinuz}.
+  \item Le bootloader du noyau se décompresse le noyau en mémoire.
+  \item La suite est identique aux autres boot.
+  \end{itemize}
+ \end{frame}
+
+\subsection{Booter par réseau}
 
 \begin{frame}{Booter par réseau}
   \begin{itemize}
@@ -35,7 +158,7 @@
     \end{itemize}
 \end{frame}
 
-\subsection{Le bootloader}
+\section{Le bootloader}
 
 \begin{frame}[fragile=singleslide]{Le bootloader}{Description}
   \begin{itemize}
@@ -85,7 +208,7 @@
   \begin{itemize}
     \item Grub
     \item Syslinux (et son dérivé Isolinux)
-    \item U-Boot (utilisé ici)
+    \item U-Boot
     \item Redboot
     \item BareBox (successeur de U-Boot)
   \end{itemize}
@@ -161,7 +284,7 @@ host$ tftp 127.0.0.1 -c "get hello"
   \item  Il  est  possible  de  modifier le  répertoire  partagé  dans
     \file{/etc/default/tftpd-hpa}
   \end{itemize}
-\end{frame}  
+\end{frame}
 
 \begin{frame}[fragile=singleslide]{TFTP}
   \note[item]{Il faut fournir le noyau pré-compilé ou le noyau Calao}
@@ -216,7 +339,7 @@ uboot> bootm 21000000
   \item Installation
     \begin{lstlisting}
 host% apt-get install nfs-kernel-server nfs-common
-host$ mkdir nfs-root 
+host$ mkdir nfs-root
 host% vim /etc/exports
     \end{lstlisting} % $
     \note[item]{nfs-common contient le client}
@@ -253,7 +376,7 @@ target% mount -t nfs 192.168.1.10:/home/user/nfs-root nfs-mount
        \end{lstlisting} % $
      \item En cas de problème, vérifiez les logs: \file{/var/log/daemon.log}
    \end{itemize}
-\end{frame}  
+\end{frame}
 
 %    \note[item] {Ca permet de ne pas leur donner le rootfs. Est-ce qu'on garde?}
 %    \note[item] {C'est une très mauvaise idée de dumper une partition montée}
@@ -328,7 +451,7 @@ host$ make O=build ARCH=arm CROSS_COMPILE=arm-linux- menuconfig
     \item    \verb+usb-a9260_defconfig+   permet   de    charger   une
       configuration pré-établie pour notre carte
       \begin{lstlisting}
-host$ make O=build ARCH=arm CROSS_COMPILE=arm-linux- usb-a9260_defconfig          
+host$ make O=build ARCH=arm CROSS_COMPILE=arm-linux- usb-a9260_defconfig
       \end{lstlisting}
     \begin{itemize}
     \item Certains constructeur vous  fournirons un patch ajoutant une
@@ -356,7 +479,7 @@ host$ make XXImage
   \item Dans  le doute,  il faut consulter  la documentation  de votre
     bootloader
   \end{itemize}
-\end{frame}  
+\end{frame}
 
 \begin{frame}[fragile=singleslide]{Compiler le noyau}
   Dans notre cas, nous utilisons U-Boot (standard)
@@ -370,7 +493,7 @@ host$ make O=build ARCH=arm CROSS_COMPILE=arm-linux- uImage
     \begin{lstlisting}
 host% cp build/arch/arm/boot/uImage /srv/tftp/uImage-2.6.33.7
 host% ln -s uImage-2.6.33.7 /srv/tftp/uImage
-    \end{lstlisting} % $ 
+    \end{lstlisting} % $
   \item  Au   redémarrage,  le   bootloader  passe  par   un  registre
     l'identifiant  de   la  carte.   Cet   identifiant  (spécifique  à
     l'architecture ARM) est erroné. A  ce stade, il est plus facile de
@@ -520,7 +643,7 @@ host$ cp /opt/arm-linux-.../lib/ld-uClibc-0.9.30.2.so lib
 host$ cp /opt/arm-linux-.../lib/libuClibc-0.9.30.2.so lib
     \end{lstlisting}
   \end{itemize}
-\end{frame}  
+\end{frame}
 
 \begin{frame}[fragile=singleslide]{Installation des bibliothèques de base}
   \begin{itemize}
@@ -629,11 +752,11 @@ host% mknod dev/tty4 c 4 4
   \begin{itemize}
   \item Lancement automatique d'un shell
     \begin{lstlisting}
-host$ echo "ttyS0::askfirst:/bin/sh" > etc/inittab 
+host$ echo "ttyS0::askfirst:/bin/sh" > etc/inittab
     \end{lstlisting}
   \item Appel d'un script de démarrage.
     \begin{lstlisting}
-host$ echo "::sysinit:/etc/init.d/rcS" >> etc/inittab 
+host$ echo "::sysinit:/etc/init.d/rcS" >> etc/inittab
 host$ mkdir etc/init.d
 host$ echo "#!/bin/sh" > etc/init.d/rcS
 host$ chmod +x etc/init.d/rcS
@@ -650,13 +773,13 @@ host$ chmod +x etc/init.d/rcS
 \begin{frame}[fragile=singleslide]{Compilons init}{Fichiers de configuration}
   Il faut monter les partitions \cmd{/proc} et \cmd{/sys}:
   \begin{lstlisting}
-target% mount -t proc none /proc 
+target% mount -t proc none /proc
 target% mount -t sysfs none /sys
   \end{lstlisting}
   Automatisation du montage avec \file{inittab}:
   \begin{lstlisting}
-host$ echo "::sysinit:mount -t proc none /proc" >> etc/inittab 
-host$ echo "::sysinit:mount -t sysfs none /sys" >> etc/inittab 
+host$ echo "::sysinit:mount -t proc none /proc" >> etc/inittab
+host$ echo "::sysinit:mount -t sysfs none /sys" >> etc/inittab
   \end{lstlisting}
   Nos commandes semblent maintenant correctement fonctionner.
 \end{frame}
@@ -704,7 +827,7 @@ host$ echo "::sysinit:mount -t sysfs none /sys" >> etc/inittab
 \end{frame}
 
 \section{Quelques ajouts}
- 
+
 \subsection{\texttt{fstab}}
 
 \begin{frame}[fragile=singleslide]{Utilisation de \file{fstab}}
@@ -719,8 +842,8 @@ target% mount -a
   Nous pouvons utiliser le  fichier \file{etc/inittab} pour monter nos
   partitions automatiquement.
   \begin{lstlisting}
-host$ echo "::sysinit:/bin/mount -a" >> etc/inittab 
-host$ echo "::shutdown:/bin/mount -r -a" >> etc/inittab 
+host$ echo "::sysinit:/bin/mount -a" >> etc/inittab
+host$ echo "::shutdown:/bin/mount -r -a" >> etc/inittab
   \end{lstlisting}
 \end{frame}
 
@@ -792,7 +915,7 @@ target% mdev -s
   \item  Installation  de  \cmd{mdev}  comme \emph{handler}  pour  les
     nouveaux périphériques
     \begin{lstlisting}
-target% echo /sbin/mdev > /sys/kernel/uevent_helper 
+target% echo /sbin/mdev > /sys/kernel/uevent_helper
     \end{lstlisting}
 %   \item  Automatisation du processus
 %     \begin{lstlisting}
@@ -832,7 +955,7 @@ target% ping www.google.com
     \begin{lstlisting}
 host$ echo 'root:x:0:0:root:/root:/bin/sh' > etc/passwd
 host$ echo 'root:x:0:' > etc/group
-host$ echo "::sysinit:login" >> etc/inittab 
+host$ echo "::sysinit:login" >> etc/inittab
     \end{lstlisting}
   \item  \verb'root::0:0:root:/root:/bin/sh'  créerait un  utilisateur
     sans mot de passe
@@ -894,7 +1017,7 @@ host$ ssh root@target
     \end{itemize}
   \item  Pour \cmd{gcc},  on abbrège  souvent le  triplet  en omettant
     \verb+<VENDOR>+
-  \item Exemples: 
+  \item Exemples:
     \begin{itemize}
     \item ppc85-e8541-linux-gnu % A verfieir
     \item arm9-atmel-linux-ulibceabi % A verifier
@@ -908,7 +1031,7 @@ host$ ssh root@target
 
 \begin{frame}[fragile=singleslide]{Compiler le cross-compiler et la libc}
   \begin{itemize}
-  \item 3 étapes: 
+  \item 3 étapes:
     \begin{itemize}
     \item On compile \cmd{arm-unknown-gcc}
     \item On configure le noyau pour installer les \emph{headers}
@@ -922,7 +1045,7 @@ host$ ssh root@target
     \item Souvent des problèmes de compatibilité entre les versions
     \end{itemize}
   \end{itemize}
-\end{frame}    
+\end{frame}
 
 \begin{frame}[fragile=singleslide]{Compiler le cross-compiler et la libc}
   Différentes \cmd{libc}:
@@ -931,7 +1054,7 @@ host$ ssh root@target
   \item  eglibc  (``Embedded GNU  C  Library'',  meilleur support  des
     diverses  architectures.  Utilisée  depuis récement  sur  diverses
     distributions ``desktop'')
-  \item newlib (utilisée par Cygwin) 
+  \item newlib (utilisée par Cygwin)
   \item µclibc (très utilisée dans l'embarqué)
   \item  dietlibc  (encore  plus   petite  que  µlibc  destinée  à  la
     compilation statique)
@@ -957,7 +1080,7 @@ host% make install
     \end{lstlisting}
   \end{itemize}
 \end{frame}
-   
+
 \begin{frame}[fragile=singleslide]{Compiler la toolchain}{Crosstool-NG}
   \begin{itemize}
   \item Préparation du répertoire de build
@@ -982,20 +1105,20 @@ $ ct-ng build
   \begin{itemize}
   \item Configurons notre chaine de compilation finale
     \begin{lstlisting}
-$ ct-ng clean 
+$ ct-ng clean
 $ ct-ng menuconfig
        \end{lstlisting}
      \item Dans la configuration
        \begin{lstlisting}
 ... Prefix directory: /opt/${CT_TARGET}
-... Remove documentation 
+... Remove documentation
 ... Build Static Toolchain
 # Documentation du CPU + man gcc + wikipedia (http://en.wikipedia.org/wiki/ARM_architecture)
 ... Architecture level: armv5te
 # Page de man de gcc + documentation du CPU :
 ... Emit assembly for CPU: arm926ej-s
 ... Tuple's vendor string : sysmic
-... Threading implementation to use: (nptl) 
+... Threading implementation to use: (nptl)
 ... Add support for locales
        \end{lstlisting}
   \end{itemize}
@@ -1032,8 +1155,8 @@ target$ ./hello-mygcc
       \item Ajoutons quelques lien symboliques bien pensés
        \begin{lstlisting}[basicstyle=\ttfamily\scriptsize\color{colBasic}]
 host$ cd /opt/arm-unknown-linux-uclibcgnueabi/bin
-host$ for i in arm-unknown-linux-uclibcgnueabi-*; do 
-> ln -s $i arm-linux-${i#arm-unknown-linux-uclibcgnueabi-}; 
+host$ for i in arm-unknown-linux-uclibcgnueabi-*; do
+> ln -s $i arm-linux-${i#arm-unknown-linux-uclibcgnueabi-};
 > done
 	\end{lstlisting}
       \item N'espérez  pas compiler  du premier coup.  Mais autrefois,
@@ -1065,10 +1188,10 @@ host$ for i in arm-unknown-linux-uclibcgnueabi-*; do
 %   \item Dans notre cas, il n'est pas utile car nous n'avons pas besoin
 %     de charger de driver particuliers avant le démarrage
 %   \end{itemize}
-% \end{frame}  
+% \end{frame}
 
 % \begin{frame}[fragile=singleslide]{Initramfs}
-%   \begin{itemize} 
+%   \begin{itemize}
 %   \item Création d'un rootfs vraiment minimal:
 %     \begin{lstlisting}
 % host$ mkdir initramfs
@@ -1079,7 +1202,7 @@ host$ for i in arm-unknown-linux-uclibcgnueabi-*; do
 % host$ find . |  cpio -o | gzip > initramfs.gz
 %     \end{lstlisting}
 %   \item Comme l'image noyau, l'image initramfs doit être au format u-boot.
-%     \begin{lstlisting} 
+%     \begin{lstlisting}
 % host$ mkimage -A arm -T ramdisk -d initramfs.gz initramfs.gz.img
 % host$ cp initramfs.gz.img /srv/tftp
 % uboot> tftp 21000000 initramfs.gz.img
@@ -1088,15 +1211,15 @@ host$ for i in arm-unknown-linux-uclibcgnueabi-*; do
 % \end{frame}
 
 % \begin{frame}[fragile=singleslide]{Initramfs}
-%   \begin{itemize} 
+%   \begin{itemize}
 %   \item  On  indique  l'adresse   du  ramfs  en  second  paramètre  de
 %     \cmd{bootm}. Evidement, le noyau doit être configuré pour utiliser
 %     le ramfs.
-%     \begin{lstlisting} 
+%     \begin{lstlisting}
 % uboot> setenv autostart no
-% uboot> tftp 22000000 initramfs.gz.img 
-% uboot> tftp 21000000 uImage 
-% uboot> bootm 21000000 22000000 
+% uboot> tftp 22000000 initramfs.gz.img
+% uboot> tftp 21000000 uImage
+% uboot> bootm 21000000 22000000
 %     \end{lstlisting}
 %   \end{itemize}
 %   \note[item]{TODO P1 A verifier, tester, completer}
@@ -1108,7 +1231,7 @@ host$ for i in arm-unknown-linux-uclibcgnueabi-*; do
   Pour créer une image \cmd{jffs2}, vous devez au minimum spécifier le
   répertoire  de source,  l'image de  destination, l'endianness  et le
   padding:
-  \begin{lstlisting} 
+  \begin{lstlisting}
 target% cat /proc/mtd
 host% apt-get install mtd-utils
 host$ mkfs.jffs2 -l -p -r nfs-root -o rootfs.jffs2
@@ -1116,7 +1239,7 @@ host$ mkfs.jffs2 -l -p -r nfs-root -o rootfs.jffs2
   Afin de rendre notre image  plus performante, ajustons la taille des
   pages,  supprimons  les  cleanmarkers  (on pourrait  aussi  utiliser
   \verb+-c 0+) et changeons le propriétaires des fichier en root:
-  \begin{lstlisting} 
+  \begin{lstlisting}
 host$ mkfs.jffs2 -l -p -q -n -s 2048 -e 128 -r nfs-root -o rootfs.jffs2
   \end{lstlisting}
 \end{frame}
@@ -1125,7 +1248,7 @@ host$ mkfs.jffs2 -l -p -q -n -s 2048 -e 128 -r nfs-root -o rootfs.jffs2
   Le  plus  générique pour  recopier  la flash  sur  la  cible est  de
   démarrer Linux par un autre moyen  (NFS ou partition de rescue) et d
   utiliser les outils Linux.
-  \begin{itemize} 
+  \begin{itemize}
   \item Toujours commencer par effacer le contenu précédent (on risque
     sinon des corruptions sur le filesystem)
     \begin{lstlisting}
@@ -1134,7 +1257,7 @@ target% cd /tmp
     \end{lstlisting}
   \item    Il   existe   des    fichiers   devices    \verb+mtd*+   et
     \verb+mtdblock*+:
-    \begin{itemize} 
+    \begin{itemize}
     \item Les fichiers block ne sont la que pour la compatibilité avec
       certains outils.  Ils ne gèrent  pas les \emph{badblock}  et les
       \emph{clean markers}.
@@ -1143,49 +1266,49 @@ target% cd /tmp
     \item  Les  flashs  doivent   être  écrite  en  prenant  certaines
       precautions (padding  sur les pages, etc...).  Il est préférable
       de systématiquement écrire en utilisant les outils spécialisés
-    \end{itemize} 
+    \end{itemize}
   \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Recopier le système sur la flash}
-  \begin{itemize} 
+  \begin{itemize}
   \item Téléchargeons  le rootfs sur  notre cible. Nous  pouvons avoir
     des problèmes  de place pour stoker  cette image.  Il  est dans ce
     cas préférable de  travailler sur NFS (mais ca  n'est pas toujours
     possible).
-    \begin{lstlisting} 
+    \begin{lstlisting}
 target% tftp -g -r rootfs.jffs2
 target% nandwrite -p /dev/mtd1 rootfs.jffs2
     \end{lstlisting}
     ou bien
-    \begin{lstlisting} 
+    \begin{lstlisting}
 host$ serve_image 0.0.0.0 1234 rootfs.jffs2 128
 target% recv_image host 1234 /dev/mtd1
-    \end{lstlisting} 
+    \end{lstlisting}
   \item  Test
     \begin{lstlisting}
 target% mkdir /tmp/mtd1
 target% mount -t jffs2 /dev/mtdblock1 /tmp/mtd1
-    \end{lstlisting} 
+    \end{lstlisting}
   \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Recopier le système sur la flash}
   Il est possible d'effectuer cette opération à partir de U-Boot.
-  \begin{itemize} 
+  \begin{itemize}
   \item Nous allons utiliser TFTP sans démarrer dessous. Désactivons l'autostart
-    \begin{lstlisting} 
+    \begin{lstlisting}
 uboot> set autostart no
-    \end{lstlisting} 
+    \end{lstlisting}
   \item Toujours effacer la flash avant de flasher
-    \begin{lstlisting} 
+    \begin{lstlisting}
 uboot> nand erase clean 1000000 8800000
-    \end{lstlisting} 
+    \end{lstlisting}
   \item On place l'image en mémoire afin de la flasher
-    \begin{lstlisting} 
+    \begin{lstlisting}
 uboot> tftp 21000000 rootfs.arm.jffs2
 uboot> nand write 21000000 1000000 5A0000
-    \end{lstlisting} 
+    \end{lstlisting}
   \end{itemize}
 \end{frame}
 
@@ -1193,20 +1316,20 @@ uboot> nand write 21000000 1000000 5A0000
   L'opération est similaire au filesystem. Dans la plupart des cas, on
   place le  noyau à  part sur  une autre partition  de la  flash. Nous
   n'avons alors pas besoin de filesystem:
-  \begin{itemize} 
+  \begin{itemize}
   \item Sous Linux
     \begin{lstlisting}
 target% flash_erase /dev/mtd0 0x400000 0
 target% cd /tmp
 target% tftp -g -r uImage
-target% nandwrite -s 0x400000 -p /dev/mtd0 uImage 
+target% nandwrite -s 0x400000 -p /dev/mtd0 uImage
     \end{lstlisting}
   \item Sous U-boot
-    \begin{lstlisting} 
+    \begin{lstlisting}
 uboot> tftp 21000000 uImage
 uboot> nand erase clean 400000 200000
 uboot> nand write 21000000 400000 200000
-    \end{lstlisting} 
+    \end{lstlisting}
   \end{itemize}
 \end{frame}
 
@@ -1228,7 +1351,7 @@ fi
 \begin{frame}[fragile=singleslide]{Monter le rootfs sur l'hôte}
   L'hôte  ne possèdant  pas  de  flash, nous  devons  la simuler  pour
   pouvoir monter le rootfs:
-  \begin{itemize} 
+  \begin{itemize}
   \item  Chargeons le  module  permettant l'émulation  d'une flash  et
     copions notre image sur la flash virtuelle
     \begin{lstlisting}
@@ -1240,22 +1363,22 @@ host% nandwrite -p /dev/mtd0 rootfs.jffs2
     \begin{lstlisting}
 host% losetup /dev/loop0 rootfs.jffs2
 host% modprobe block2mtd block2mtd=/dev/loop0
-    \end{lstlisting} 
+    \end{lstlisting}
   \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Monter le rootfs sur l'hôte}
-  \begin{itemize} 
+  \begin{itemize}
   \item Chargeons la couche d''emulation par block et le filesystem
     \begin{lstlisting}
 host% modprobe mtdblock
 host% modprobe jffs2
     \end{lstlisting}
   \item Copie de notre image
-    \begin{lstlisting} 
+    \begin{lstlisting}
 host% mkdir jffs2-mount
 host% mount -t jffs2 /dev/mtdblock0 jffs2-mount
-    \end{lstlisting} 
+    \end{lstlisting}
   \end{itemize}
   % http://wiki.maemo.org/Modifying_the_root_image
 \end{frame}
@@ -1288,7 +1411,7 @@ host% apt-get install qemu-kvm-extras
 \begin{frame}[fragile=singleslide]{Qu'est-ce que Qemu?}
   Emule:
   \begin{itemize}
-  \item Simplement un jeux d'instruction 
+  \item Simplement un jeux d'instruction
     \begin{itemize}
     \item Toutes les grandes architectures sont supportée
     \item  Les  appels  système  sont  alors bindéz  vers  les  appels
@@ -1375,7 +1498,7 @@ host$ qemu-system-arm -M integrator -cpu arm926 -m 16 -kernel zImage.integrator 
 host$ wget http://buildroot.uclibc.org/downloads/buildroot-2010.11.tar.bz2
 host$ tar xvf buildroot-2010.11.tar.bz2
 host$ cd buildroot-2010.11
-    \end{lstlisting} 
+    \end{lstlisting}
   \item  Utilisation  d'une configuraiton  pré-établie  comme base  de
     configuration
     \begin{lstlisting}
@@ -1403,7 +1526,7 @@ host$ make all
     \end{itemize}
   \item Yocto remplace peu à peu OpenEmbedded dans les nouveau projet
   \item Il est poussé pour la Linux Foundation
-%  \item remplacé par Buildroot et Scratchbox 
+%  \item remplacé par Buildroot et Scratchbox
 %   \note[item]{Tout ici: \url{http://www.at91.com/linux4sam/bin/view/Linux4SAM/OpenEmbeddedAngstromBuild}}
 %   \note[item]{Résultat ici: \url{ftp://www.at91.com/pub/demo/linux4sam_2.0/linux4sam-angstrom-at91sam9260ek.zip}}
 %   \item  Récupératon d'une version d'OpenEmbedded ppackagə pour notre architecture
@@ -1448,7 +1571,7 @@ host$ make all
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Qemu et Scratchbox}
-  \begin{itemize} 
+  \begin{itemize}
   \item Installation
     \begin{lstlisting}
 host% apt-get install scratchbox2
@@ -1457,20 +1580,20 @@ host$ cd scratchbox
     \end{lstlisting}
   \item Initialisation de l'environement. Nous utilisons qemu-arm pour
     lancer nos binaire cibles et arm-linux-gcc comme compilateur
-    \begin{lstlisting} 
+    \begin{lstlisting}
 host$ sb2-init -c qemu-arm -n A926 arm-linux-gcc
     \end{lstlisting}
-  \item Démarrage de l'environement 
-    \begin{lstlisting} 
+  \item Démarrage de l'environement
+    \begin{lstlisting}
 host$ sb2
     \end{lstlisting}
   \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Qemu et Scratchbox}
-  \begin{itemize} 
+  \begin{itemize}
   \item La cross-compilation est transparente
-    \begin{lstlisting} 
+    \begin{lstlisting}
 qemu$ gcc hello.c -static -o hello-sb2-static
 qemu$ file hello-sb2-static
 qemu$ ./hello-sb2-static
@@ -1479,13 +1602,9 @@ qemu$ file hello-sb2
     \end{lstlisting}
   \item Comme  sur la cible,  nous avons besoin que  les bibliothèques
     soit bien configurées dans notre environement
-    \begin{lstlisting} 
+    \begin{lstlisting}
 qemu$ cp -a /opt/arm-unknown-linux-uclibcgnueabi/arm-unknown-linux-uclibcgnueabi/sysroot/lib .
 qemu$ ./hello-sb2
-    \end{lstlisting} 
-  \end{itemize} 
+    \end{lstlisting}
+  \end{itemize}
 \end{frame}
-
-
-
-

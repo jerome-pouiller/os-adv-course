@@ -20,7 +20,9 @@
 \end{frame}
 
 % TODO: Section à etoffer. Il faut tout détailler
-\section{Pagination de la mémoire}
+\section{Gestion de la mémoire}
+
+\subsection{Segmentation de la mémoire}
 
 \begin{frame}{La MMU}
   Le temps partagé  permet de simuler que chaque tâche  est la seule à
@@ -39,7 +41,7 @@
 \begin{frame}[fragile=singleslide]{La segmentation}
   \begin{itemize}
     \item Premier mécanisme de protection
-    \item On associe à des zone de mémoire des droits
+    \item Associe aux des droits aux zones de mémoire
     \item Indique au CPU  que certaines zone (appelés \emph{segments})
       de la mémoire ne doivent pas  être écrite ou ne doivent pas être
       exécutées
@@ -51,6 +53,8 @@
       conjointement avec la pagination
   \end{itemize}
 \end{frame}
+
+\subsection{Pagination de la mémoire}
 
 \begin{frame}{La pagination et la MMU}
   Les CPU  modernes intègrent  un composant appelé  MMU (\emph{Memory
@@ -67,16 +71,17 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{La pagination et la MMU}
-  \begin{center}
-    \includegraphics[height=6cm]{pics/linearaddress}
-  \end{center}
-\end{frame}
 
-\begin{frame}{La MMU (2)}
+\begin{frame}{La MMU}
   \begin{itemize}
   \item  Il est  possible de  changer les  associations  simplement en
-    chargeant un pointeur sur une autre table
+    chargeant fesant pointer un registre sur une autre table:
+    \begin{itemize}
+    \item   le  \emph{Page   Table   Base  register   (PTBR)}  ou   le
+      \emph{Translation Table Base Register (TTBR))}
+    \item sur Intel: CR3
+    \item  sur Arm: C2
+    \end{itemize}
   \item On  défini alors une table  par tâche.  Lors  du changement de
     contexte, on change aussi de table
   \item Le CPU possède alors deux modes:
@@ -89,7 +94,7 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{La MMU (2)}
+\begin{frame}{La MMU}
   \begin{center}
     \includegraphics[height=6cm]{pics/img9}
   \end{center}
@@ -97,6 +102,39 @@
     au  mode utilisateur  et vice  versa\\}
   \note{Vérifier  sur wikipedia  ``adresse  virtuelle'' et  ``mémoire
     paginée''}
+\end{frame}
+
+\begin{frame}{La MMU}
+Concretement:
+  \begin{itemize}
+    \item Les pages peuvent être de tailles fixe ou variables.
+    \item Sous Linux,  afin de simplifier la gestion,  on utilise pour
+      la plupart des architectures des pages de 4Kio.
+    \item La table de page permet d'obtenir un \emph{Page Frame Number (PFN)}
+    \item Le PFN correspond aux bits de poids fort de l'adresse physique
+    \item  La table  de page  est décomposée  en plusieur  tables (les
+      terme   proviennent   de  l'architecture   Intel   et  se   sont
+      généralisés):
+      \begin{itemize}
+      \item Page Global Directory (PGD)
+      \item Page Middle Directory (PMD)
+      \item Page Table Entry (PTE)
+      \end{itemize}
+      \item les tables sont aligné sur des addresse de 4K
+      \item  ... Seul  les  bits  de poid  fort  (le \emph{PFN})  sont
+        nécessaire pour indiquer l'emplacement de la tbale suivante en
+        mémoire
+      \item  ... Il  est  possible d'utiliser  les  bit restants  pour
+        d'autres usages: validité de l'entrée, etc...
+      \item          cf          \file{arch/asm/pgtable.h}          et
+        \file{include/linux/mm-types.h}, \c{mm_struct->pgd}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{La pagination et la MMU}
+  \begin{center}
+    \includegraphics[height=6cm]{pics/linearaddress}
+  \end{center}
 \end{frame}
 
 \begin{frame}{La MMU - gestion des exceptions}
@@ -132,7 +170,7 @@
   \end{itemize}
 \end{frame}
 
-\subsection {Passage en mode superviseur}
+\subsection{Passage en mode superviseur}
 
 \begin{frame}{Passage en mode superviseur}
   Un processus utilisateur ne peut pas passer en mode superviseur.
@@ -187,15 +225,18 @@
     modifiées
   \item Une page contenant des données constantes (donné ou code) peut
     être mappée dans plusieurs tâches différentes
+  \item ... C'est ainsi que plusieurs instance de la même bibliothèque
+    ne sont chargées qu'une fois en mémoire
   \item En retirant les droits  en exécution sur les pages de données,
     on améliore la sécurité du système (impossible d'exécuter une page
     contenant des données)
   \item Une  page accessible  en écriture peut  être mappée  dans deux
     tâches afin de leur permettre de partager des données
+  \item cf \file{/proc/PID/maps}
   \end{itemize}
 \end{frame}
 
-\begin{frame}{La MMU - gestion des exceptions}
+\begin{frame}{Gestion de l'espace d'adressage virtuel}
   Le MMU permet à l'OS de mieux utiliser la mémoire:
   \begin{itemize}
   \item  L'OS peut  donner  des espaces  d'addressage virtuel  contigu
@@ -262,6 +303,65 @@
   \file{/proc/sys/vm/overcommit\_memory}
 \end{frame}
 
+\subsection{Mapping des fichiers en mémoire}
+
+\begin{frame}{Gestion de la mémoire}
+  Simplification des accès au IO
+  \begin{itemize}
+  \item   La  tâche   demande  de   mapper  un   fichier   en  mémoire
+    (\man{mmap(2)})
+  \item cf. \file{/proc/*/maps}
+  \item  Le système  alloue un  espace d'adressage  virtuel égal  à la
+    taille du fichier
+  \item Le fichier en lui même n'est pas chargé en mémoire (\emph{lazy
+      loading})
+  \item Lorsque la  tâche accès à un espace  du fichier, une exception
+    est levée et la page  demandée est chargée de manière transparente
+    (\emph{on demand paging})
+  \item cf. champ RSS de \file{/proc/*/smaps}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Les pages \emph{dirty}}
+  \begin{itemize}
+  \item Quelques  soit la demande de l'utilisateur,  le système marque
+    les page associés à des fichier comme Read-Only.
+  \item  Ainsi, lorsque  la tâche  tente  d'écrire dans  la page,  une
+    exception est levée
+  \item  La  page est  alors  marquée  \emph{dirty}, les  droits  en
+    écriture sont données et le système rend la main
+  \item (Le  marquage des page  \emph{Dirty} peut aussi  être effectué
+    automatiquement par le CPU)
+  \item Le système sait que  cette page devra être synchronisé avec la
+    mémoire de masse
+  \item Le système peut repousser cette opération
+  \item Lorsque  le système  a synchroniser la  page, il la  marque de
+    nouveau Read-Only
+  \item Lorsque  le système  à besoin de  mémoire, il peut:
+    \begin{itemize}
+    \item Décharger les page readonly ou les pages \emph{clean}
+    \item écrire  les pages  modifiées sur le  disque et  décharger la
+      page de la mémoire
+    \end{itemize}
+  \item cf. champ Dirty de \file{/proc/*/smaps} et \man{free(1)}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Partage de page}
+  \begin{itemize}
+  \item Une  tâche peut demander explicitement de  partager un segment
+    de mémoire avec une autre page.
+  \item Il  suffit de  faire pointer deux  adresse virtuelle  vers la
+    même adresse physique
+  \item Lorsqu'un fichier (ou une  section du fichier) est déjà chargé
+    en  mémoire,  le  système  ne  duplique  pas  la  page.  Elle  est
+    automatiquement marqué comme page partagée
+  \item Si  une des  tâche tente d'y  accéder en écriture,  le système
+    duplique la  page juste  avant l'accès en  écriture (et  marque la
+    nouvelle page comme dirty).
+  \end{itemize}
+\end{frame}
+
 \subsection{La Swap}
 
 \begin{frame}{La swap}
@@ -269,22 +369,22 @@
   \item La  swap est une partie  de la mémoire de  masse utilisée pour
     stockée des données de la mémoire RAM
   \item Utilisation de la Swap:
-  \begin{itemize}
-  \item Lorsque le système n'a plus assez de mémoire
-  \item Il choisit une page physique qu'il copie sur le disque dur
-  \item  Il  supprime  la  page   de  la  MMU  de  la  (les)  tâche(s)
-    concernée(s)
-  \item Lorsque la tâche accède à la page supprimée, une exception est
-    levée
-  \item Le système récupère alors la page sur le disque
-  \item Le système réécrit la page dans la mémoire physique
-  \item Il associe l'adresse virtuelle demandée avec la nouvelle page
-    physique
-  \item L'OS rend la main à la tâche
-  \item Tout est transparent pour la tâche
+    \begin{itemize}
+    \item Lorsque le système n'a plus assez de mémoire
+    \item Il choisit une page physique qu'il copie sur le disque dur
+    \item  Il  invalide  la  page  de  la MMU  de  la  (les)  tâche(s)
+      concernée(s)
+    \item Lorsque la  tâche accède à la page  supprimée, une exception
+      est levée
+    \item Le système récupère alors la page sur le disque
+    \item Le système réécrit la page dans la mémoire physique
+    \item  Il associe  l'adresse virtuelle  demandée avec  la nouvelle
+      page physique
+    \item L'OS rend la main à la tâche
+    \item Tout est transparent pour la tâche
+    \end{itemize}
+  \item Voir \file{/proc/sys/vm/swappiness}
   \end{itemize}
-\item Voir \file{/proc/sys/vm/swappiness}
-\end{itemize}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Compression de la mémoire}
@@ -300,16 +400,13 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile=singleslide]{\c{mlock}                     et
-  \c{mlockall}}
+\begin{frame}[fragile=singleslide]{\c{mlock} et \c{mlockall}}
   \begin{itemize}
-  \item Les  fonctions systèmes \c{mlock}  et \c{mlockall}
-    permettent  de  demander  à  Linux  de garder  des  pages  (ou  la
-    totalité en mémoire)
+  \item Les fonctions systèmes \c{mlock} et \c{mlockall} permettent de
+    demander à Linux de garder des pages (ou la totalité en mémoire)
   \item Elle empêche ainsi l'utilisation de l'overcommit et du swap.
-  \item  Il ne  faut pas  oublier d'allouer  une pile  suffisante avant
-    d'appeler \c{mlockall}
-    \note{Ajouter du code à ce sujet}
+  \item Il  ne faut  pas oublier d'allouer  une pile  suffisante avant
+    d'appeler \c{mlockall} \note{Ajouter du code à ce sujet}
   \end{itemize}
 \end{frame}
 
@@ -328,103 +425,6 @@ int main() {
 \end{lstlisting}
 \end{frame}
 
-\subsection{Gestion par l'OS}
-
-\begin{frame}[fragile]{Mapping de l'OS}
-  \begin{itemize} 
-  \item Une interruption  peut avoir lieu depuis n'importe quel processus
-  \item Lors d'une interruption (ou  d'un appel système), le CPU passe
-    en mode  superviseur, mais  le mapping mémoire  reste celui  de la
-    tâche d'origine
-  \item Pour  des raison de performance,  il est préférable  de ne pas
-    faire  de  changement de  mapping  durant  l'éxecution de  l'appel
-    système (ou de l'interruption)
-  \item Le noyau se trouve donc  dans une zone interdite en accès mais
-    toujours mappé au même endroit quelquesoit la tâche.
-  \item Afin  de simplifier les opérations  d'acces aux entrée/sortie,
-    le  mapping du  noyau est  dit 'flat  mapping'. C'est  à  dire que
-    chaque addresse  virtuelle correspond à une adresse  physique + un
-    offset  constant (par  défaut  sur PC:  0xC0000000,  c'est à  dire
-    3Go). Cet espace s'apelle ``low memory''
-  \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{Mapping de l'OS}
-  \begin{itemize} 
-  \item Le  noyau peut  allouer de  la mémoire en  dehors de  la ``low
-    memory'' (en  ``high memory''), mais il devrat  peut-être faire un
-    changement de mapping mémoire pour y accéder.
-  \item Le noyau  réserve la ``low memory'' pour  son usage. Une tache
-    ne peut pas allouer de la mémoire dans cette zone.
-  \item Par défaut sur Linux 32bits, l'espace est partagé en 1Go / 3Go
-  \item Sur un système possédant  moins de 1Go de mémoire physique, le
-    kernel peut accéder à tout  l'espace physique à partir de la ``low
-    memory''.  Sinon,  il peut potentiellement  y avoir des  pertes de
-    performances lors  de l'accès par  le noyau à la  mémoire physique
-    supérieure au premier Gigaoctet.
-  \item Une application demandant  plus de 3Go d'espace virtuelle peut
-    ne pas fonctionner
-  \item La solution: passer en 64bits.
-  \end{itemize} 
-\end{frame}
-
-\subsection{Mapping des fichiers en mémoire}
-
-\begin{frame}{Gestion de la mémoire}
-  Simplification des accès au IO
-  \begin{itemize}
-  \item   La  tâche   demande  de   mapper  un   fichier   en  mémoire
-    (\man{mmap(2)})
-  \item cf. \file{/proc/*/maps}
-  \item  Le système  alloue un  espace d'adressage  virtuel égal  à la
-    taille du fichier
-  \item Le fichier en lui même n'est pas chargé en mémoire
-  \item Lorsque la  tâche accès à un espace  du fichier, une exception
-    est levée et la page demandée est chargée de manière transparente
-  \item cf. champ RSS de \file{/proc/*/smaps}
-  \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile=singleslide]{Les pages dirty}
-  La marque \emph{Dirty}
-  \begin{itemize}
-  \item Quelques  soit la demande de l'utilisateur,  le système marque
-    les page associés à des fichier comme Read-Only.
-  \item  Ainsi, lorsque  la tâche  tente  d'écrire dans  la page,  une
-    exception est levée
-  \item  La  page est  alors  marquée  \emph{dirty}  , les  droits  en
-    écriture sont données et le système rend la main
-  \item Le système sait que  cette page devra être synchronisé avec la
-    mémoire de masse
-  \item Le système peut repousser cette opération
-  \item Lorsque  le système  a synchroniser la  page, il la  marque de
-    nouveau Read-Only
-  \item cf. champ Dirty de \file{/proc/*/smaps}
-  \end{itemize}
-  Ce mécanisme est complémentaire à l'utilisation de la Swap. :
-  \begin{itemize}
-  \item Lorsque  le système  à besoin de  mémoire, il peut  écrire les
-    pages modifiées sur le disque et décharger la page de la mémoire
-  \end{itemize}
-  cf.    champ   \emph{buffer}   et   \emph{cache}  de   la   commande
-  \man{free(1)}
-\end{frame}
-
-\begin{frame}[fragile=singleslide]{Partage de page}
-  \begin{itemize}
-  \item Une  tâche peut demander explicitement de  partager un segment
-    de mémoire avec une autre page.
-  \item Il  suffit de  faire pointer deux  adresse virtuelle  vers la
-    même adresse physique
-  \item Lorsqu'un fichier (ou une  section du fichier) est déjà chargé
-    en  mémoire,  le  système  ne  duplique  pas  la  page.  Elle  est
-    automatiquement marqué comme page partagée
-  \item Si  une des  tâche tente d'y  accéder en écriture,  le système
-    duplique la  page juste  avant l'accès en  écriture (et  marque la
-    nouvelle page comme dirty).
-  \end{itemize}
-\end{frame}
-
 \subsection{Mapping de périphérique en mémoires}
 
 \begin{frame}{Gestion de la mémoire}
@@ -434,7 +434,7 @@ int main() {
     mémoire, on utilise la MMU pour y accéder
   \item Il  est possible d'autoriser  l'accès à un périphérique  à une
     tâche sans lui donner d'accès au reste du système
-  \item Un système utilisant  très fortement cette méthode est appelé
+  \item Un  système utilisant très fortement cette  méthode est appelé
     micro-kernel
   \item La méthode est peu  utilisée sous Linux (on utilisera \c{mmap}
     sur \file{/dev/mem})
@@ -449,13 +449,13 @@ int main() {
   \item  L'interprétation  de  cette  de  demande  est  laissée  à  la
     discrétion du driver
   \item Dans certains cas, ca n'a pas de sens: un port série
-  \item \file{/dev/mem}:  permet de mapper toute la  mémoire physique sur
-    une adresse virtuelle
-  \item   \file{/dev/video0}   (Webcam):   L'espace  de   mémoire   mappé
+  \item \file{/dev/mem}:  permet de  mapper toute la  mémoire physique
+    sur une adresse virtuelle
+  \item  \file{/dev/video0}   (Webcam):  L'espace  de   mémoire  mappé
     représentera une frame.
-  \item  \file{/dev/fb0} (Frame buffer):  L'espace de  mémoire représente
+  \item \file{/dev/fb0} (Frame buffer): L'espace de mémoire représente
     l'écran
-  \item Ce mécanisme vite les recopie de données
+  \item Ce mécanisme évite les recopies de données
   \end{itemize}
 \end{frame}
 
@@ -463,12 +463,12 @@ int main() {
   Un DMA \emph{Direct Memory Access}:
   \begin{itemize}
   \item Il s'agit d'un mécanisme matériel.
-  \item  Il   doit  être  supporté   par  le  contrôleur   de  mémoire
-    (comprenant le MMU), le périphérique (ou le bus) et par l'OS
-  \item Le  driver donne au périphérique  une adresse  (physique) où
+  \item Il doit être supporté par le contrôleur de mémoire (comprenant
+    le MMU), le périphérique (ou le bus) et par l'OS
+  \item  Le driver  donne au  périphérique une  adresse  (physique) où
     écrire
   \item Le périphérique demande un canal DMA au contrôleur
-  \item Dans le cas d'un PC, c'est le contrôleur PCI (le northbridge)
+  \item Dans le cas d'un  PC, c'est le contrôleur PCI (le northbridge)
     qui joue le rôle de contrôleur
   \item  Le  périphérique écrit/lit  ses  données  en  passant par  le
     contrôleur de mémoire mais sans passer par le CPU
@@ -478,15 +478,16 @@ int main() {
   Le  driver peut  décider  de  mapper la  zone  DMA directement  dans
   l'espace d'adressage de la  tâche utilisateur. Avec ce mécanisme, il
   est possible de traiter de grande quantité de données sans copie.
+  \note[item]{Ajouter un shéma}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Fonctionnement    d'un    récepteur
     satellite haut de gamme}
   \begin{itemize}
-  \item Un  récepteur satellite  (ou IP-TV) est  principalement composé
+  \item Un  récepteur satellite (ou IP-TV)  est principalement composé
     d'un démodulateur/démultiplexeur et d'une carte graphique.
   \item Ces deux périphérique sont équipés de DMA
-  \item  On  alloue  une  zone  de  mémoire  suffisamment  grande  pour
+  \item  On  alloue  une  zone  de mémoire  suffisamment  grande  pour
     réceptionner quelques images (2 - 3 au moins)
   \item L'OS passe l'adresse de cette zone au démultiplexeur
   \item Des que le multiplexer à fini d'écrire une frame, il déclenche
@@ -560,5 +561,46 @@ int main() {
 \end{lstlisting}
 \end{frame}
 
+\subsection{Gestion par l'OS}
+
+\begin{frame}[fragile]{Mapping de l'OS}
+  \begin{itemize}
+  \item  Une  interruption  peut  avoir  lieu  depuis  n'importe  quel
+    processus
+  \item Lors d'une interruption (ou  d'un appel système), le CPU passe
+    en mode  superviseur, mais  le mapping mémoire  reste celui  de la
+    tâche d'origine
+  \item Pour  des raison de performance,  il est préférable  de ne pas
+    faire  de  changement de  mapping  durant  l'éxecution de  l'appel
+    système (ou de l'interruption)
+  \item Le noyau se trouve donc  dans une zone interdite en accès mais
+    toujours mappé au même endroit quelquesoit la tâche.
+  \item Afin  de simplifier les opérations  d'acces aux entrée/sortie,
+    le  mapping du  noyau est  dit 'flat  mapping'. C'est  à  dire que
+    chaque addresse  virtuelle correspond à une adresse  physique + un
+    offset constant  (par défaut sur PC: \c{0xC0000000},  c'est à dire
+    3Go). Cet espace s'apelle \emph{low memory}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Mapping de l'OS}
+  \begin{itemize}
+  \item Le noyau peut allouer de  la mémoire en dehors de la \emph{low
+      memory} (en \emph{high memory}),  mais il devrat peut-être faire
+    un changement de mapping mémoire pour y accéder.
+  \item  Le noyau  réserve la  \emph{low memory}  pour son  usage. Une
+    tache ne peut pas allouer de la mémoire dans cette zone.
+  \item Par défaut sur Linux 32bits, l'espace est partagé en 1Go / 3Go
+    (Windows: 2Go / 2Go)
+  \item Sur un système possédant  moins de 1Go de mémoire physique, le
+    kernel  peut accéder  à  tout  l'espace physique  à  partir de  la
+    \emph{low  memory}.  Sinon,  il peut  potentiellement y  avoir des
+    pertes de performances  lors de l'accès par le  noyau à la mémoire
+    physique supérieure au premier Gigaoctet.
+  \item Une application demandant  plus de 3Go d'espace virtuelle peut
+    ne pas fonctionner
+  \item La solution: passer en 64bits.
+  \end{itemize}
+\end{frame}
 
 \note{Montrer l'arborescence du kernel: mm, kernel, include, arch, drivers, scripts, tools, Documentation, }

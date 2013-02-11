@@ -64,14 +64,24 @@
   % 12-14 
   % 14-16 
 
+  \begin{frame}{Sommaire}
+    \begin{itemize} 
+      \item Gestion de la mémoire système % 2h
+      \item Gestion de la mémoire applicative % 2h
+      \item Systèmes de compilations croisées % 4h 
+      \item Assemblage des diverses briques de l'OS % 4h
+      \item Ecriture de drivers % 2h
+      \item Virtualisation % 1h
+    \end{itemize} 
+  \end{frame}
+
 
   % Il faut 240 slides:
   % Fonctionnement de la segmentation et de la pagination
 \include{system-memory}
   % Algorithme de gestion de la mémoire
-\include{user-memory}
   % Les IPC: Bus logiciel, etc...
-\include{ipc}
+\include{user-memory}
   % Fonctionnement des drivers: Char dev, etc... ?
 %\include{drivers1}
   % Monolithique/micro, archi Linux, serveurs, bibliothèque, etc...
@@ -85,8 +95,9 @@
   % Drivers/modules, udev
 \include{drivers}
   % Debug
-\include{debug}
+%\include{debug}
   % Virtualisation (chroot/pivot_root, namespace, lxc, qemu/javascript/java/dotnet/lwm, qemu-system/kvm)
+%\include{virtual}
 
 
 \end{document}
