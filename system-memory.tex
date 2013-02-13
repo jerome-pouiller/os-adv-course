@@ -19,7 +19,36 @@
 \tableofcontents[currentpart]
 \end{frame}
 
-% TODO: Section à etoffer. Il faut tout détailler
+% TODO: Refaire les schémas
+% TODO: Les premiers slides de chaque thème doivent n'afficher que le titre et ensuite le corps
+% TODO: Réorganiser toute la partie mémoire système:
+% Peut-être que certaines partie de user-memory doivent aussi apparaitre ici:
+%  Problèmatique
+%  Segmentation
+%  Pagination
+%  Fonctionnement de la pagination
+%  Fonctionnement d'un appel système
+%  La séparation de la mémoire
+%  Les erreurs de segmentation
+%  L'overcommit 
+%  Le lazy loading
+%  L'allocation backée sur un fichier "shared"
+%  L'allocation backée sur un fichier "private" (COW)
+%  Le cache
+%  Le chargement des sections des ELF
+%  L'allocation anonyme
+%  La swap
+%  Les algorithmes de remplacement de pages
+%  Mlock et mlockall
+%  Allocation backée sur un fichier périphérique
+%  Fonctionnement d'un DMA
+%  Les processus et les threads
+%  La TLB
+%  Les algorthmes de remplacement d'entrée dans la TLB
+%  Fonctionnement de la pile (inclut fomit-pointer, etc...)
+%  Fonctionnement du tas
+%  Mapping de l'OS
+
 \section{Gestion de la mémoire}
 
 \subsection{Segmentation de la mémoire}
@@ -120,6 +149,17 @@ Concretement:
       \item Page Middle Directory (PMD)
       \item Page Table Entry (PTE)
       \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{La pagination et la MMU}
+  \begin{center}
+    \includegraphics[height=6cm]{pics/linearaddress}
+  \end{center}
+\end{frame}
+
+\begin{frame}{La pagination et la MMU}
+  \begin{itemize}
       \item les tables sont aligné sur des addresse de 4K
       \item  ... Seul  les  bits  de poid  fort  (le \emph{PFN})  sont
         nécessaire pour indiquer l'emplacement de la tbale suivante en
@@ -130,11 +170,19 @@ Concretement:
         \file{include/linux/mm-types.h}, \c{mm_struct->pgd}
     \end{itemize}
 \end{frame}
-
+    
 \begin{frame}{La pagination et la MMU}
-  \begin{center}
-    \includegraphics[height=6cm]{pics/linearaddress}
-  \end{center}
+    \begin{center}
+      \includegraphics[width=9cm]{pics/x86PageTableEntry4KB}
+    \end{center}    
+  \begin{itemize}
+  \item R/W: Read/Write
+  \item P: Present
+  \item D: Dirty (souvent automatique)
+  \item A: Accessed (souvent automatique)
+  \item U/S: User/Supervisor
+  \item avail: Available for OS usage
+    \end{itemize}
 \end{frame}
 
 \begin{frame}{La MMU - gestion des exceptions}
@@ -254,6 +302,7 @@ Concretement:
   \end{itemize}
 \end{frame}
 
+% Ajouter une section sur les algorithme de remplacement d'entrée dans la TLB
 \begin{frame}[fragile=singleslide]{Context Swap, cache et MMU}
   \begin{itemize}
   \item  Le  MMU est  associé  à  un  cache appelé  TLB  (Translation
@@ -270,13 +319,22 @@ Concretement:
     \item  Manuel: Une  exception  est déclenchée.   L'OS parcourt  la
       table, met à jour le TLB et rend la main.
     \end{itemize}
+    \item Notez qu'une entrée dans la TLB n'a pas la même structure qu'une entrée de PTE.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Context Swap, cache et MMU}
+    \begin{center}
+      \includegraphics[width=9cm]{pics/mipsr3000_tlb}
+    \end{center}    
+  \begin{itemize}
   \item Dans  le cas d'un  système multiprocessus, le  mappping change
     lorsque l'on passe d'une tache à l'autre
     \begin{itemize}
     \item  Certains systèmes nécessitent  d'invalider la  totalité du
       TLB
     \item  D'autre permettent  d'associer  un numéro  de  tâche à  une
-      entrée  du TLB. Ainsi,  lorsque la  tâche précédente  reprend la
+      entrée  du TLB (ASID: Address Space ID). Ainsi,  lorsque la  tâche précédente  reprend la
       main, ses entrées dans le TLB sont encore valides
     \end{itemize}
   \end{itemize}
@@ -364,6 +422,9 @@ Concretement:
 
 \subsection{La Swap}
 
+% TODO: Ajouter une section au sujet des algorithme de remplacement de pages
+% Ajouter une section au sujet des heuristiques sur l'overcommit, la swapiness, etc... : à quel moment sont déchargés ces pages
+% Ajouter une section sur le OOM manager
 \begin{frame}{La swap}
   \begin{itemize}
   \item La  swap est une partie  de la mémoire de  masse utilisée pour
@@ -371,9 +432,9 @@ Concretement:
   \item Utilisation de la Swap:
     \begin{itemize}
     \item Lorsque le système n'a plus assez de mémoire
-    \item Il choisit une page physique qu'il copie sur le disque dur
+    \item Il choisit une page physique qu'il copie sur le disque dur (parmis les pages non 'Accessed')
     \item  Il  invalide  la  page  de  la MMU  de  la  (les)  tâche(s)
-      concernée(s)
+      concernée(s) (le flag 'present' est suprimmé. L'OS utilise alors le PTE pour stocker l'addresse de la page dans la swap)
     \item Lorsque la  tâche accède à la page  supprimée, une exception
       est levée
     \item Le système récupère alors la page sur le disque
@@ -574,7 +635,7 @@ int main() {
     faire  de  changement de  mapping  durant  l'éxecution de  l'appel
     système (ou de l'interruption)
   \item Le noyau se trouve donc  dans une zone interdite en accès mais
-    toujours mappé au même endroit quelquesoit la tâche.
+    toujours mappé au même endroit quelquesoit la tâche (flag User/Supervisor).
   \item Afin  de simplifier les opérations  d'acces aux entrée/sortie,
     le  mapping du  noyau est  dit 'flat  mapping'. C'est  à  dire que
     chaque addresse  virtuelle correspond à une adresse  physique + un
