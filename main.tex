@@ -89,11 +89,13 @@
   % Systèmes de compilation: Make, autotools, cmake
 \include{compil}
   % Boot: A ecrire! : chargement en memoire, bootloader, kernel, head.S, start_kernel (init/main.c), initrd, rootfs (root=, /bin/init, /etc/inittab, /etc/rcS. /etc/init.d(beurk)), initrd (pour les drivers), boot nfs, boot tftp, mtd/jffs2, ubi
-%\include{boot}
+\include{boot}
   % Fabrication de Linux : kernel, buildroot, toolchain (glibc/uclibc, etc...), mtd
 \include{make-elinux}
   % Drivers/modules, udev
 \include{drivers}
+  % Api Kernel
+\include{api}
   % Debug
 %\include{debug}
   % Virtualisation (chroot/pivot_root, namespace, lxc, qemu/javascript/java/dotnet/lwm, qemu-system/kvm)

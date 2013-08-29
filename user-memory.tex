@@ -188,7 +188,7 @@ void f(int i) {
 \begin{frame}{Liste de blocs}
   \emph{Best fit}  On recherche le  bloc disponible de taille  la plus
   proche de  celle nécessaire.  Il s'avère que  cette méthode garantie
-  que l'espace inutilisé est petit et cond inutilisable
+  que l'espace inutilisé est petit et donc inutilisable
   \\
   Exemple (\textbf{A}jout, \textbf{D}elete):
   \begin{center}
@@ -234,7 +234,7 @@ void f(int i) {
     taille égale
   \item On utilise une simple bitmap pour géré les bloc disponibles
   \item Algorithme le plus rapide et ayant le moins de frgamentation
-  \item Principe du salb dans le noyau (\file{/proc/slabinfo})
+  \item Principe du slab dans le noyau (\file{/proc/slabinfo})
   \end{itemize}
 \end{frame}
 
@@ -270,7 +270,7 @@ void f(int i) {
     \begin{itemize}
     \item \c{.text}, \c{.rodata}, \c{.data}
     \item \c{mmap}
-    \item Peut devenir anonyme si modifié (et marqué Copy-On-Write)
+    \item Traité comme de la mémoire anonyme si modifié et privée (=Copy-On-Write)
     \end{itemize}
   \item Mémoire anonyme
     \begin{itemize}
@@ -284,11 +284,11 @@ void f(int i) {
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Résumé agencement mémoire}
-    \pgfimage[width=10cm]{pics/linuxFlexibleAddressSpaceLayout}
+    \pgfimage[width=8cm]{pics/linuxFlexibleAddressSpaceLayout}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Fonctionnement Linux}
-    \pgfimage[width=10cm]{pics/memoryDescriptorAndMemoryAreas}
+    \pgfimage[width=8cm]{pics/memoryDescriptorAndMemoryAreas}
 \end{frame}
 
 \section{Les garbages collectors}
@@ -421,7 +421,7 @@ void f(int i) {
   \end{itemize}
 \end{frame}
 
-\subsection{Technique de debug mémoire}
+\section{Technique de debug mémoire}
 
 \begin{frame}[fragile=singleslide]{dmalloc}
   \begin{itemize}
@@ -444,18 +444,19 @@ void f(int i) {
 \begin{frame}[fragile=singleslide]{dmalloc}
   \begin{itemize} 
   \item Paquet Ubuntu bugué: \url{https://bugs.launchpad.net/ubuntu/+source/dmalloc/+bug/971174}
-  \item \cmd{ wget http://dmalloc.com/releases/dmalloc-5.5.2.tgz}
-  \item \cmd{tar xvzf dmalloc-5.5.2.tgz}
-  \item Suppression des surcharges des fonctions dans \file{malloc.c}
-  \item \cmd{ ./configure && make && sudo make install}
+  %\item \cmd{ wget http://dmalloc.com/releases/dmalloc-5.5.2.tgz}
+  %\item \cmd{tar xvzf dmalloc-5.5.2.tgz}
+  %\item Suppression des surcharges des fonctions dans \file{malloc.c}
+  %\item \cmd{ ./configure && make && sudo make install}
   \item Ajouter \c{#include <dmalloc.h>}
-  \item \cmd{gcc -g debug_mem.c -ldmalloc -o debug_mem_dmalloc}
-  \item \cmd{dmalloc -DV}
-  \item \cmd{dmalloc -tV}
-  \item \cmd{dmalloc high -m error-abort -l dmalloc.out}
-  \item
-    \cmd{echo 123456 | DMALLOC_OPTIONS=debug=0xcb4ed2b,log=dmalloc.out ./debug_mem_dmalloc}
-  \item \cmd{less dmalloc.out}
+  \begin{lstlisting}
+$ gcc -g debug_mem.c -ldmalloc -o debug_mem_dmalloc
+$ dmalloc -DV
+$ dmalloc -tV
+$ dmalloc high -m error-abort -l dmalloc.out
+$ echo 123456 | DMALLOC_OPTIONS=debug=0xcb4ed2b,log=dmalloc.out ./debug_mem_dmalloc
+$ less dmalloc.out
+  \end{lstlisting}
   \end{itemize}
 \end{frame}
 
@@ -477,14 +478,11 @@ void f(int i) {
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Libefence, DUMA et kmemcheck}
-  \begin{itemize}
-  \item \cmd{gcc -g debug_mem.c -o debug_mem_duma}
-  \item \cmd{ulimit -c unlimited}
-  \item \cmd{rm core}
-  \item
-    \cmd{echo 1234 | LD_PRELOAD=/usr/lib/libduma.so.0.0.0 DUMA_FILL=1 DUMA_PROTECT_FREE=1 ./debug_mem_duma}
-  \item \cmd{gdb -core core debug_mem_duma}
-  \end{itemize}
+  \begin{lstlisting}
+$ gcc -g debug_mem.c -o debug_mem_duma
+$ echo 1234 | LD_PRELOAD=/usr/lib/libduma.so.0.0.0 DUMA_FILL=1 DUMA_PROTECT_FREE=1 ./debug_mem_duma
+$ gdb -core core debug_mem_duma
+  \end{lstlisting}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Valgrind, kmemleak, Mudflap}
@@ -513,26 +511,26 @@ void f(int i) {
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Valgrind}
-  \begin{itemize} 
-  \item \cmd{gcc -g debug_mem.c -o debug_mem_valgrind}
-  \item \cmd{echo 123456 | valgrind --leak-check=yes ./debug_mem_valgrind}
-  \end{itemize}  
+  \begin{lstlisting}
+$ gcc -g debug_mem.c -o debug_mem_valgrind
+$ echo 123456 | valgrind --leak-check=yes ./debug_mem_valgrind
+  \end{lstlisting}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Mudflap}
-  \begin{itemize}
-  \item \cmd{sudo apt-get install libmudflap0-4.6-dev}
-  \item \cmd{gcc -g -fmudflap debug_mem.c -lmudflap  -o debug_mem_mudflap}
-  \item \cmd{echo 12345 | MUDFLAP_OPTIONS='-help' ./debug_mem_mudflap}
-  \item \cmd{echo 12345 | MUDFLAP_OPTIONS='-print-leaks -check-initialization' ./debug_mem_mudflap}
-  \end{itemize}
+  \begin{lstlisting}
+$ sudo apt-get install libmudflap0-4.6-dev
+$ gcc -g -fmudflap debug_mem.c -lmudflap  -o debug_mem_mudflap
+$ echo 12345 | MUDFLAP_OPTIONS='-help' ./debug_mem_mudflap
+$ echo 12345 | MUDFLAP_OPTIONS='-print-leaks -check-initialization' ./debug_mem_mudflap
+  \end{lstlisting}
 \end{frame}
 
 \section{Communication interprocessus}
 
 \begin{frame}[fragile]{Communication interprocessus}
   Les processus  ayant des espace  mémoire séparés, il  est nécessaire
-  d'voir des systèmes plus évolués pour les faire communiquer:\\
+  d'avoir des systèmes plus évolués pour les faire communiquer:\\
   InterProcessus Communication: IPC.
 \end{frame}
 
@@ -716,7 +714,7 @@ void unlock(mutex_t *m) {
 
 \begin{frame}[fragile=singleslide]{Les bus logiciels}
   \begin{itemize}
-    \item Les socket sont puissant mais manquent d'abstraction
+    \item Les socket sont puissants mais manquent d'abstraction
     \item Les \emph{Bus logiciels} offrent les abstraction nécessaires
       \begin{itemize}
         \item Broadcasting d'évènement
