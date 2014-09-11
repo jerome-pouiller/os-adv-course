@@ -48,6 +48,7 @@
           Pointe sur (plus ou moins) la base de la frame en cours
         \end{itemize}
       \item On  accède à un variable  locale en lisant  l'adresse \c{$fp + #CONSTANTE}
+      \item cf. \cmd{ulimit -s}
       \end{itemize}
     \end{column}
     \begin{column}{4cm}
@@ -58,28 +59,35 @@
 
 \begin{frame}{La pile}
   \begin{columns}
-    \begin{column}{4cm}
+    \begin{column}{6cm}
+      Lors d'un appel de fonction:
       \begin{itemize}
-      \item  Lorsque l'on appel  une fonction,  on sauvegarde  le contexte
-        (dont \c{$sp}) à  partir de \c{$sp}, on affecte  \c{$sp} à \c{$fp}
-        et on  ajoute la somme de  la taille du contexte  et des variables
-        allouées localement à \c{$sp}
-      \item Ainsi une allocation locale est très rapide (incrémentation de
-        \c{$sp})
+        \only<1->{
+          \item Place les arguments sur la pile (certains arguments peuvent aussi être passé par registre)
+        }
+        \only<2->{
+        \item Sauvegarde du contexte: principalement \c{$ip} (\emph{return address}) et \c{$fp}
+        }
+        \only<3->{
+        \item Affecte \c{$sp} à \c{$fp}, et l'adresse de la fonction à appeller à \c{$ip} 
+        \item Ajoute la somme de  la taille du contexte  et des variables
+          allouées localement à \c{$sp}
+        \item Ainsi une allocation locale est très rapide (incrémentation de
+          \c{$sp})
+        }
       \end{itemize}
     \end{column}
     \begin{column}{6.5cm}
       \begin{overprint}
-        \onslide<1>
-
-        \onslide<2>
+        \only<1>{
         \pgfimage[width=7cm]{pics/fig3}
-
-        \onslide<3>
+        }
+        \only<2>{
         \pgfimage[width=7cm]{pics/fig4}
-
-        \onslide<4>
+        }
+        \only<3>{
         \pgfimage[width=7cm]{pics/fig5}
+        }
       \end{overprint}
     \end{column}
   \end{columns}
@@ -98,7 +106,7 @@
   \item   Les   fonctions   avec   un  nombre   variable   d'arguments
     (\emph{variadic functions}, cf  \man{va\_arg(3)}) ont une taille de
     frame variable en fonction du nombre d'arguments.
-  \item  Il  est  possible   d'allouer  dynmaiquement  de  la  mémoire
+  \item  Il  est  possible   d'allouer  dynamiquement  de  la  mémoire
     supplémentaire sur la frame courante: \man{alloca(3)}
   \item C'est ainsi que sont implémentés des choses du genre
     \begin{lstlisting}

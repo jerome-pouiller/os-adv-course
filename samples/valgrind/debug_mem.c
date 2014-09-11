@@ -56,7 +56,7 @@ int *fun() {
   bss = malloc(sizeof(int));      // memory leaks (still reachable)                            O   /    N      O
   bss[0] = 1;
   var = 1;
-  return NULL;                    // return reference to local object (detected during compil) /   /    N      N
+  return &var;                    // return reference to local object (detected during compil) /   /    N      N
 }
 
 int main(int argc, char **argv) {

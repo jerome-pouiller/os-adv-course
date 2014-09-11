@@ -492,7 +492,6 @@ host$ scripts/cleanfile my_module.c
   \end{itemize} 
 \end{frame}
 
-% TODO: A revoir
 \section{Notre premier device}
 
 \begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
@@ -505,7 +504,7 @@ target% mknod my_chardev c <major> <minor>
   \item Communication en écrivant/lisant des données
     \begin{lstlisting}
 target% insmod my_chardev.ko
-target% echo toto >  my_dhardev
+target% echo toto > my_chardev
 target% cat my_chardev
     \end{lstlisting}
   \item Possibilité de faire un peu de configuration par les ioctl
@@ -513,88 +512,146 @@ target% cat my_chardev
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
-  Exo: Faire un pipe avec un buffer:
+  Tentons de faire un driver qui renvois la dernière chaine recue:
   \begin{lstlisting}
 target% insmod my_chardev.ko
-target% echo toto >  my_dhardev
+target% mknod my_chardev c 249 0
+target% echo toto >  my_chardev
 target% cat my_chardev
 toto
   \end{lstlisting}
-  \begin{itemize}
-  \item \verb+copy_to_user+, \verb+copy_from_user+
-  \item \verb+kcalloc+, \verb+kfree+
-  \item \verb+register_chrdev+, \verb+unregister_chrdev_region+
-  \item   \verb+mutex_lock+,  \verb+mutex_unlock+,  \verb+mutex_init+,
-    \verb+mutex_destroy+
-  \item \verb+memmove+
-  \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
-   Vérifions votre comportement:
-   \begin{lstlisting}
-target% insmod my_chrdev.ko
-target% mknod my_chrdev c 251 0
-target$ for i in {1..64}; echo "$i " > my_chrdev
-target$ cat my_chrdev
-target% rmmod my_chrdev
-target% insmod my_chrdev.ko buf_size=2
-target$ echo foo > /dev/my_chrdev
-target$ cat /dev/my_chrdev
-target% rmmod my_chrdev
-target% insmod my_chrdev.ko buf_size=-1
-    \end{lstlisting} % $
+  Enregistrement du \emph{file device}
+  \begin{lstlisting}[language=c]
+#include <linux/fs.h>
+static int major = 0;
+
+static int __init m_init(void) {
+  major = register_chrdev(0, "m_chrdev", &m_fops);
+}
+
+static void __exit m_exit(void) {
+  unregister_chrdev(major, "m_chrdev");
+}
+
+  \end{lstlisting}
 \end{frame}
- 
-% \begin{frame}{Les ioctls}
-%   C'est un appel système qui permet de faire passer une structure
-%   quelconque à un device.\\
-%   Pour appeller un ioctl, il faut un device, le numéro de l'IOCTL et
-%   l'arguments.\\
-%   Les  numéro d'IOCTL  se  décode ainsi  (attention,  ca n'est  qu'une
-%   norme, et elle a ses exeception, principalement powerpc):
-% %   \begin{lstlisting}
-% %  bits    meaning
-% %  31-30  00 - no parameters: uses _IO macro
-% %         10 - read: _IOR
-% %         01 - write: _IOW
-% %         11 - read/write: _IOWR
-% % 
-% %  29-16  size of arguments
-% % 
-% %  15-8   ascii character supposedly
-% %         unique to each driver
-% % 
-% %  7-0    function #
-% % 
-% % 
-% % So for example 0x82187201 is a read with arg length of 0x218,
-% % character 'r' function 1. Grepping the source reveals this is:
-% % Les ioctl doivent être unique par device. Mais on préfère qu'il soit unique
-% % sur tout le système.
-% % 
-% % Les macro _IOR, _IOW, _IORW et _IO nous aident:
-% % #define CHANGE_BUF_SZ _IOR(42, 1, int)
-% %    \end{lstlisting}
 
-% Aller plus loin: \file{device.h}: Implémentation d'un device complet.
-% \end{frame}
+\begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
+  \cmd{&m_fops} est une structure contenant les références des callbacks à appeller par le noyau (cf. \cmd{include/linux/fs.h}):
+  \begin{lstlisting}[language=c]
+static struct file_operations m_fops = {
+  .owner          = THIS_MODULE,
+  .read           = m_read,
+  .write          = m_write,
+};
+  \end{lstlisting}
+\end{frame}
 
-\begin{frame}[fragile=singleslide]{Obtenir de la documentation}
+\begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
+Nous devons maintenant implémenter \cmd{m_read} et \cmd{m_write}
+  \begin{lstlisting}[language=c]
+static ssize_t m_read(struct file *file, char *user_buf, size_t count, loff_t *ppos) {
+    return 0;
+}
+
+static ssize_t m_write(struct file *file, const char *user_buf, size_t count, loff_t *ppos) {
+    return count;
+}
+  \end{lstlisting}
+Effectuons un premier test:
   \begin{lstlisting}
-host$ make mandocs
-host% make installmandocs
-  \end{lstlisting}  % $
-  \begin{itemize}
-    \item Paquet linux-doc: \file{/usr/share/doc/linux-doc/html/kernel-api}
-    \item Pas de paquet pour ces pages de man 
-    \item ou pages de man sur \url{http://tfm.cz}
-  \end{itemize}
+target% echo toto > my_chardev
+target% cat my_chardev
+  \end{lstlisting}
 \end{frame}
 
-% TODO: Faire un device usb-gadget/hid 
+\begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
+Ajoutons la gestion du buffer. Il est necessaire de prendre des précaution pour 
+accéder à la mémoire du programme utilisateur.
+  \begin{lstlisting}[language=c]
+static char global_buf[255];
 
-% Note
-% echo none > /sys/devices/platform//leds-gpio/leds/user_led/trigger
-% echo 255 > /sys/devices/platform//leds-gpio/leds/user_led/brightness
+static ssize_t m_read(struct file *file, char *user_buf, size_t count, loff_t *ppos) {
+    if (count > idx)
+        count = idx;
+    copy_to_user(user_buf, global_buf, count);
+    idx = 0;
+    return count;
+}
+
+static ssize_t m_write(struct file *file, const char *user_buf, size_t count, loff_t *ppos) {
+    if (count > 255)
+        count = 255;
+    copy_from_user(global_buf, user_buf, count);
+    idx = count;
+    return count;
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
+Protégeons notre code contre les accès concurent:
+  \begin{lstlisting}[language=c]
+#include <linux/mutex.h>
+static struct mutex mutex;
+
+static ssize_t m_read(struct file *file, char *user_buf, size_t count, loff_t *ppos) {
+  mutex_lock(&mutex);
+[...]
+  mutex_unlock(&mutex);
+  return count;
+}
+
+static ssize_t m_write(struct file *file, const char *user_buf, size_t count, loff_t *ppos) {
+  mutex_lock(&mutex);
+[...]
+  mutex_unlock(&mutex);
+  return count;
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
+  Ajoutons un \emph{ioctl}:
+  \begin{lstlisting}[language=c]
+#include "mod2_chr.h"
+static long m_ioctl(struct file *file, unsigned int nr, unsigned long arg) {
+  if (nr == FIFO_GET_LEN) {
+    int ret = copy_to_user((void *) arg, &idx, sizeof(idx));
+    return ret;
+  }
+  return -EINVAL;
+}
+static struct file_operations m_fops = {
+[...]
+  .unlocked_ioctl = m_ioctl,
+};
+
+  \end{lstlisting}
+Dans \cmd{mod2_chr.h}:
+  \begin{lstlisting}[language=c]
+#include <linux/ioctl.h>
+
+#define FIFO_GET_LEN _IOR('f', 0x01, int)
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile=singleslide]{Communiquer avec le noyau}{char\_dev}
+Testons:
+  \begin{lstlisting}[language=c]
+#include "mod2_chr.h"
+
+int main(int argc, char **argv) {
+        int ret, arg = 42;
+        int fd = open(argv[1], O_RDONLY);
+        ret = ioctl(fd, FIFO_GET_LEN, &arg);
+        printf("Returned %m with argument %d\n", -ret, arg);
+        return 0;
+}
+  \end{lstlisting}
+\end{frame}
+
 

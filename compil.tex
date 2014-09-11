@@ -55,7 +55,7 @@ make CC=arm-linux-gcc
   \begin{lstlisting}
 mkdir arm
 cd arm
-make -f ../Makefile VPATH=.. CC==arm-linux-gcc
+make -f ../Makefile VPATH=.. CC=arm-linux-gcc
   \end{lstlisting}
   Exemple avec memstat.
 \end{frame}
@@ -64,7 +64,7 @@ make -f ../Makefile VPATH=.. CC==arm-linux-gcc
   Utiliser au maximum les règles implicites facilite votre travail
   \begin{lstlisting}
 host$ touch Makefile
-host$ make
+host$ make hello
   \end{lstlisting} %$
 \end{frame}
 
@@ -109,7 +109,7 @@ host$ make -f ../Makefile VPATH=.. CC=arm-linux-gcc
 \begin{frame}[fragile=singleslide]{Créer un projet sans autotools}
   Nous pouvons  ajouter des alias  pour nous aider dans  les commandes
   complexes
-  \lstinputlisting[firstline=11]{samples/hello/Makefile.5}
+  \lstinputlisting[firstline=10]{samples/hello/Makefile.5}
   \note[item]{TODO: Ajouter des \#ifdef CONFIG pour faire dans Kconfig}
   \note[item]{Parler de apt-get source (-b), dpkg -L, dpkg -l, dpkg-buildpackage}
 \end{frame}
@@ -187,11 +187,11 @@ $ vim Makefile.am
 bin_PROGRAMS = hello
 hello_SOURCES = hello.c hello.h
 \end{lstlisting}
-  \item Les \cmd{autotools}  imposent l'existence de certains fichiers
-    de documentation
-\begin{lstlisting}
-$ touch NEWS README AUTHORS ChangeLog
-\end{lstlisting} %$
+%  \item Les \cmd{autotools}  imposent l'existence de certains fichiers
+%    de documentation
+%\begin{lstlisting}
+%$ touch NEWS README AUTHORS ChangeLog
+%\end{lstlisting} %$
   \end{itemize}
 \end{frame}
 
@@ -209,7 +209,7 @@ $ vim configure.ac
 \begin{lstlisting}
 ...
 AC_INIT([hello], [1.0], [bug@sysmic.org])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign])
 ...
 \end{lstlisting}
   \item      Génération      du      \file{configure}      et      des
